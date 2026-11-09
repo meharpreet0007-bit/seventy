@@ -189,6 +189,17 @@ function viewLeagues() {
   <div class='grid two'><section class='card'><h2>Create a league</h2><form class='inline' data-form='createLeague'><input class='input' name='name' required maxlength='30' placeholder='League name' aria-label='League name'><button class='btn' type='submit'>Create</button></form></section>
   <section class='card'><h2>Join a league</h2>${joinForm('Join')}</section></div>`;
 }
+function dailySnaps(ids, mon) {
+  const focus = S.snapDay && weekDates(mon).includes(S.snapDay) && S.snapDay <= today() ? S.snapDay : today();
+  const has = u => { const d = day(u, focus); return !!(d && d.snap_path); };
+  const posted = ids.filter(has), missing = ids.filter(u => !has(u));
+  const pills = weekDates(mon).map(x => `<button class='dp' data-act='snapDay' data-arg='${x}' aria-pressed='${x === focus}' aria-label='${long(x)}' ${x > today() ? 'disabled' : ''}><span>${DAYS[parse(x).getDay()][0]}</span><b>${parse(x).getDate()}</b></button>`).join('');
+  let body;
+  if (isSunday(focus) && !posted.length) body = `<p class='muted'>Sunday is a rest day, so there are no gym snaps.</p>`;
+  else body = `<div class='snapgrid'>${posted.map(u => { const d = day(u, focus); return `<button class='sg' data-act='snap' data-arg='${u}|${focus}' aria-label='${nameOf(u)}, ${short(focus)}'><img data-snap='${esc(d.snap_path)}' alt=''><span class='cap'><b>${nameOf(u)}</b>${clock(d.snap_at)}${d.snap_verified ? ', verified' : ''}</span></button>`; }).join('')}${missing.map(u => `<div class='sg none'>${avatar(S.profiles[u], u === S.uid ? 'you' : '')}<span><b>${nameOf(u)}</b>No snap</span></div>`).join('')}</div>`;
+  return `<section class='card'><div class='cardhead'><h2>Daily snaps</h2><span class='pts'>${posted.length} of ${ids.length} posted</span></div><div class='daypills'>${pills}</div>${body}</section>`;
+}
+
 function viewLeague(id) {
   const l = S.leagues.find(x => x.id === id), mon = mondayOf(today()), ids = leagueMembers(id);
   const sorted = ids.slice().sort((a, b) => weekTotal(b, mon) - weekTotal(a, mon) || score(today(), day(b, today())) - score(today(), day(a, today())));
@@ -197,7 +208,7 @@ function viewLeague(id) {
     return `<button class='lb${me ? ' me' : ''}' data-act='${me ? 'go' : 'player'}' data-arg='${me ? 'dashboard' : u}'><span class='pos'>${i + 1}</span>${avatar(p, me ? 'you' : '')}<span class='nm'>${me ? 'You' : esc(p.name)}<small>${r.tier || 'Unranked'}, today ${score(today(), day(u, today()))} of 10</small></span><span class='wk'>${weekTotal(u, mon)}<small>of 70</small></span></button>`;
   }).join('');
   return `<button class='back' data-act='backLeagues'>&#8249; All leagues</button><div class='pagehead'><div><h1>${esc(l.name)}</h1><p>Week of ${short(mon)}, ${ids.length} member${ids.length === 1 ? '' : 's'}</p></div></div>
-  <div class='grid two'><div class='stack'><section class='card'><h2>Leaderboard</h2><div class='list'>${rows}</div></section><section class='card'><h2>Snaps this week</h2>${snapStrip(snapsFor(ids, mon).slice(0, 40))}</section></div>
+  <div class='grid two'><div class='stack'><section class='card'><h2>Leaderboard</h2><div class='list'>${rows}</div></section>${dailySnaps(sorted, mon)}</div>
   <div class='stack'><section class='card'><h2>Invite people</h2>${inviteBox(l.code)}<p class='muted small'>Members can see each other's points and snaps. Body measurements stay private.</p></section><button class='link danger' data-act='leaveLeague' data-arg='${id}'>${S.confirm === 'leave' + id ? 'Tap again to leave this league' : 'Leave league'}</button></div></div>`;
 }
 

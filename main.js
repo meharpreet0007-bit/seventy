@@ -225,6 +225,7 @@ const ACTIONS = {
   nav(a) { S.date = addDays(S.date, +a); render(); },
   day(a) { S.dayFocus = a; render(); },
   week(a) { S.week = a; render(); },
+  snapDay(a) { S.snapDay = a; render(); },
   snap(a) { const [u, x] = a.split('|'); openSnap(u, x); },
   camera() { openCamera(); },
   editDetails() { viewOnboard(); toTop(); },
