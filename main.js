@@ -87,16 +87,39 @@ function viewAuth(mode, error) {
 }
 function viewOnboard(error) {
   tabs.hidden = true;
-  const sec = viewOnboard.sec || 'biceps';
-  app.innerHTML = `<div class='auth'><h1>Set up your profile</h1><form class='form' id='onb'>
-  <input class='input' type='text' id='name' required maxlength='20' placeholder='Your name' aria-label='Your name' value='${esc(viewOnboard.name || '')}'>
-  <p class='muted small'>Sunday measurement</p><div class='seg' role='group'><button type='button' data-sec='biceps' aria-pressed='${sec === 'biceps'}'>Biceps</button><button type='button' data-sec='glutes' aria-pressed='${sec === 'glutes'}'>Glutes</button></div>
-  ${error ? `<p class='err'>${esc(error)}</p>` : ''}<button class='btn full' type='submit'>Start</button></form></div>`;
-  app.querySelectorAll('[data-sec]').forEach(b => b.onclick = () => { viewOnboard.sec = b.dataset.sec; viewOnboard.name = document.getElementById('name').value; viewOnboard(); });
+  const me = S.me || {}, d = S.details || {}, editing = !!(S.me && S.details);
+  const gender = d.gender || (me.second_measure === 'glutes' ? 'female' : me.second_measure === 'biceps' ? 'male' : '');
+  const pick = (group, val, label, cur) => `<button type='button' data-group='${group}' data-pick='${val}' aria-pressed='${cur === val}'>${label}</button>`;
+  app.innerHTML = `<div class='auth'><div><h1>${editing ? 'Edit your details' : 'Your details'}</h1><p class='muted'>Only you can see your age, height, weight and goal.</p></div>
+  <form class='form' id='onb'>
+  <label class='field'>Name<input class='input' type='text' id='name' required maxlength='20' autocomplete='given-name' value='${esc(me.name || '')}'></label>
+  <div class='field'>Gender<div class='seg' role='group'>${pick('gender', 'male', 'Male', gender)}${pick('gender', 'female', 'Female', gender)}</div></div>
+  <div class='fields'>
+    <label class='field'>Age<input type='number' id='age' inputmode='numeric' required min='13' max='100' step='1' value='${d.age == null ? '' : esc(d.age)}'></label>
+    <label class='field'>Height, cm<input type='number' id='height' inputmode='decimal' required min='100' max='250' step='any' value='${d.height_cm == null ? '' : esc(d.height_cm)}'></label>
+    <label class='field'>Weight, kg<input type='number' id='weight' inputmode='decimal' required min='25' max='300' step='any' value='${d.start_weight == null ? '' : esc(d.start_weight)}'></label>
+  </div>
+  <div class='field'>Goal<div class='seg' role='group'>${pick('goal', 'fat_loss', 'Lose fat', d.goal)}${pick('goal', 'muscle', 'Build muscle', d.goal)}${pick('goal', 'maintain', 'Stay fit', d.goal)}</div></div>
+  <p class='err' id='onberr'>${error ? esc(error) : ''}</p>
+  <button class='btn full' type='submit'>${editing ? 'Save details' : 'Continue'}</button>
+  ${editing ? `<button class='link center' type='button' id='onbcancel'>Cancel</button>` : ''}</form></div>`;
+  app.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    app.querySelectorAll(`[data-group='${b.dataset.group}']`).forEach(x => x.setAttribute('aria-pressed', x === b));
+  });
+  const cancel = document.getElementById('onbcancel');
+  if (cancel) cancel.onclick = () => render();
+  const chosen = g => { const b = app.querySelector(`[data-group='${g}'][aria-pressed='true']`); return b ? b.dataset.pick : null; };
   document.getElementById('onb').onsubmit = async e => {
     e.preventDefault();
-    try { await api.createProfile({ id: S.uid, name: document.getElementById('name').value.trim(), second_measure: sec }); await boot(); }
-    catch (err) { viewOnboard(err.message || `Couldn't save. Try again.`); }
+    const err = document.getElementById('onberr'), g = chosen('gender'), goal = chosen('goal'), btn = e.target.querySelector('[type=submit]');
+    if (!g) { err.textContent = 'Choose your gender.'; return; }
+    if (!goal) { err.textContent = 'Choose your goal.'; return; }
+    btn.disabled = true;
+    try {
+      await api.saveProfile({ id: S.uid, name: document.getElementById('name').value.trim(), second_measure: g === 'female' ? 'glutes' : 'biceps' });
+      await api.saveDetails({ user_id: S.uid, age: Number(document.getElementById('age').value), height_cm: Number(document.getElementById('height').value), start_weight: Number(document.getElementById('weight').value), gender: g, goal });
+      await boot();
+    } catch (ex) { btn.disabled = false; err.textContent = `Couldn't save your details. Check your connection and try again.`; }
   };
 }
 
@@ -119,7 +142,7 @@ async function boot() {
   S.uid = S.uid || await api.session();
   if (!S.uid) return viewAuth(takeInvite() ? 'signup' : 'signin');
   await load();
-  if (!S.me) return viewOnboard();
+  if (!S.me || !S.details) return viewOnboard();
   S.date = S.date || today();
   const code = takeInvite();
   if (code) { clearInvite(); try { await join(code); } catch (e) { toast(e.message || `That invite didn't work.`); } }
@@ -204,6 +227,7 @@ const ACTIONS = {
   week(a) { S.week = a; render(); },
   snap(a) { const [u, x] = a.split('|'); openSnap(u, x); },
   camera() { openCamera(); },
+  editDetails() { viewOnboard(); toTop(); },
   player(a) { S.prev = { view: S.view, league: S.league }; S.player = a; S.week = null; render(); toTop(); },
   backPlayer() { S.player = null; S.week = null; render(); toTop(); },
   league(a) { S.league = a; S.confirm = null; render(); toTop(); },

@@ -134,7 +134,7 @@ function viewDashboard() {
   <div class='grid two'><div class='stack'><section class='card'><h2>Weekly scores</h2>${scoreChart(S.uid, 'var(--you)')}</section>${waistChart(S.uid, 'var(--you)')}</div>
   <div class='stack'><section class='card'><h2>Points this week</h2>${Object.keys(b).map(k => `<div class='meter'><div><span>${k}</span><span class='muted'>${b[k]} of ${max[k]}</span></div><span class='trk'><i style='width:${b[k] / max[k] * 100}%'></i></span></div>`).join('')}</section>
   ${past ? `<section class='card'><h2>Past weeks</h2><div class='table'>${past}</div></section>` : ''}
-  <section class='card'><h2>Profile</h2><form class='inline' data-form='rename'><input class='input' name='name' maxlength='20' required value='${esc(S.me.name)}' aria-label='Your name'><button class='btn ghost' type='submit'>Save name</button></form><button class='link' data-act='signout'>Sign out</button></section></div></div>`;
+  <section class='card'><h2>Profile</h2><button class='btn ghost full' data-act='editDetails'>Edit your details</button><button class='link' data-act='signout'>Sign out</button></section></div></div>`;
 }
 
 /* Join and invite helpers */

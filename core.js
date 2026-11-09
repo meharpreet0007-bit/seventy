@@ -40,7 +40,7 @@ const TIERS = [{ n: 'Bronze', min: 0 }, { n: 'Silver', min: 35 }, { n: 'Gold', m
 function tierFor(avg) { let t = TIERS[0]; TIERS.forEach(x => { if (avg >= x.min) t = x; }); return t; }
 
 /* State */
-const S = { uid: null, me: null, profiles: {}, days: {}, meas: {}, duel: null, opp: null, leagues: [], members: [], view: 'today', date: null, dayFocus: null, league: null, player: null, week: null, confirm: null, snapUrls: {} };
+const S = { uid: null, me: null, profiles: {}, days: {}, meas: {}, duel: null, opp: null, leagues: [], members: [], view: 'today', date: null, dayFocus: null, league: null, player: null, week: null, confirm: null, snapUrls: {}, details: null };
 const day = (uid, date) => (S.days[uid] || {})[date];
 const measOf = (uid, date) => (S.meas[uid] || {})[date];
 const weekTotal = (uid, mon) => weekDates(mon).reduce((a, x) => a + score(x, day(uid, x)), 0);
@@ -82,6 +82,8 @@ const api = {
   async signUp(e, p) { const d = must(await sb.auth.signUp({ email: e, password: p })); return d.session ? d.user.id : null; },
   async signOut() { await sb.auth.signOut(); },
   async createProfile(p) { must(await sb.from('profiles').insert(p)); },
+  async saveProfile(p) { must(await sb.from('profiles').upsert(p)); },
+  async saveDetails(r) { must(await sb.from('profile_details').upsert(r, { onConflict: 'user_id' })); },
   async rename(id, name) { must(await sb.from('profiles').update({ name }).eq('id', id)); },
   async saveDay(row) { must(await sb.from('days').upsert(row, { onConflict: 'user_id,date' })); },
   async saveMeas(row) { must(await sb.from('measurements').upsert(row, { onConflict: 'user_id,date' })); },
@@ -95,17 +97,19 @@ const api = {
 };
 async function load() {
   const from = addDays(mondayOf(today()), -84);
-  const [profiles, duels, leagues, members, recent, mine, meas] = await Promise.all([
+  const [profiles, duels, leagues, members, recent, mine, meas, details] = await Promise.all([
     pageAll(() => sb.from('profiles').select('*').order('created_at')),
     pageAll(() => sb.from('duels').select('*').order('created_at')),
     pageAll(() => sb.from('leagues').select('*').order('created_at')),
     pageAll(() => sb.from('league_members').select('*').order('joined_at')),
     pageAll(() => sb.from('days').select('*').gte('date', from).order('date')),
     pageAll(() => sb.from('days').select('*').eq('user_id', S.uid).order('date')),
-    pageAll(() => sb.from('measurements').select('*').order('date'))
+    pageAll(() => sb.from('measurements').select('*').order('date')),
+    pageAll(() => sb.from('profile_details').select('*').eq('user_id', S.uid))
   ]);
   S.profiles = {}; profiles.forEach(p => { S.profiles[p.id] = p; });
   S.me = S.profiles[S.uid] || null;
+  S.details = details[0] || null;
   S.days = {}; recent.concat(mine).forEach(r => { (S.days[r.user_id] = S.days[r.user_id] || {})[r.date] = r; });
   S.meas = {}; meas.forEach(r => { (S.meas[r.user_id] = S.meas[r.user_id] || {})[r.date] = r; });
   S.duel = duels.find(d => !d.ended_at && (d.player_a === S.uid || d.player_b === S.uid)) || null;
