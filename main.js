@@ -15,6 +15,7 @@ let saveTimer = null;
 function queue() { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 500); }
 async function flush() {
   clearTimeout(saveTimer);
+  let ok = true;
   const dates = [...pendingDays], ms = [...pendingMeas];
   pendingDays.clear(); pendingMeas.clear();
   try {
@@ -22,6 +23,7 @@ async function flush() {
       const d = day(S.uid, date), row = { user_id: S.uid, date };
       COLS.forEach(c => { row[c] = d[c] === undefined ? null : d[c]; });
       if (row.snap_verified == null) row.snap_verified = false;
+      if (row.measured == null) row.measured = false;
       await api.saveDay(row);
     }
     for (const date of ms) {
@@ -30,8 +32,12 @@ async function flush() {
     }
   } catch (e) {
     dates.forEach(x => pendingDays.add(x)); ms.forEach(x => pendingMeas.add(x));
-    toast(`Couldn't save your last change.`, 'Try again', flush);
+    ok = false; flush.failed = true;
+    toast(`Couldn't save your last change. ${e.message || ''}`, 'Try again', flush);
+    saveTimer = setTimeout(flush, 8000);
   }
+  if (ok && flush.failed) { flush.failed = false; toastEl.classList.remove('open'); }
+  return ok;
 }
 function setDay(fields, date) {
   date = date || S.date;
@@ -178,6 +184,7 @@ function cameraBlocked() {
   };
 }
 function compress(src, w, h, verified) {
+  if (!w || !h) { toast('The camera is still starting. Try again in a second.'); return; }
   const k = Math.min(1, 1080 / Math.max(w, h)), c = document.createElement('canvas');
   c.width = Math.round(w * k); c.height = Math.round(h * k);
   const x = c.getContext('2d');
@@ -201,9 +208,10 @@ async function sendSnap(url) {
     const path = await api.uploadSnap(S.uid, date, cam.blob);
     delete S.snapUrls[path];
     setDay({ gym: true, snap_path: path, snap_verified: cam.verified, snap_at: new Date().toISOString() }, date);
-    await flush();
-    URL.revokeObjectURL(url); closeLayer(); render(); toast('Snap sent');
-  } catch (e) { btn.disabled = false; btn.textContent = 'Send snap'; toast(`Your snap didn't send. Check your connection and try again.`); }
+    const saved = await flush();
+    URL.revokeObjectURL(url); closeLayer(); render();
+    if (saved) toast('Snap sent');
+  } catch (e) { btn.disabled = false; btn.textContent = 'Send snap'; toast(`Your snap didn't send. ${e.message || 'Check your connection and try again.'}`); }
 }
 async function openSnap(uid, date) {
   const d = day(uid, date); if (!d || !d.snap_path) return;
