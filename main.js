@@ -165,12 +165,12 @@ async function openCamera() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return cameraBlocked();
   try { stopStream(); cam.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: cam.facing, width: { ideal: 1280 }, height: { ideal: 1706 } }, audio: false }); }
   catch (e) { return cameraBlocked(); }
-  layer.innerHTML = `<div class='stage'><video id='v' autoplay playsinline muted class='${cam.facing === 'user' ? 'flipv' : ''}'></video></div><div class='controls'><button id='cancel'>Cancel</button><button class='shutter' id='shoot' aria-label='Take snap'></button><button class='right' id='flip'>Flip</button></div>`;
+  layer.innerHTML = `<div class='stage'><div class='frame'><video id='v' autoplay playsinline muted class='${cam.facing === 'user' ? 'flipv' : ''}'></video></div></div><div class='controls'><button id='cancel'>Cancel</button><button class='shutter' id='shoot' aria-label='Take snap'></button><button class='right' id='flip'>Flip</button></div>`;
   const v = document.getElementById('v');
   v.srcObject = cam.stream;
   document.getElementById('cancel').onclick = closeLayer;
   document.getElementById('flip').onclick = () => { cam.facing = cam.facing === 'user' ? 'environment' : 'user'; openCamera(); };
-  document.getElementById('shoot').onclick = () => compress(v, v.videoWidth, v.videoHeight, true);
+  document.getElementById('shoot').onclick = () => compress(v, v.videoWidth, v.videoHeight, true, cam.facing === 'user');
 }
 function cameraBlocked() {
   layer.innerHTML = `<div class='stage'><div class='message'><p>The camera is blocked here. Allow camera access in your browser settings for a verified snap, or use your phone camera.</p><label class='filelabel' for='filecap'>Use phone camera</label><input class='vh' id='filecap' type='file' accept='image/*' capture='user'><button id='cancel'>Cancel</button></div></div>`;
@@ -183,12 +183,15 @@ function cameraBlocked() {
     img.src = URL.createObjectURL(f);
   };
 }
-function compress(src, w, h, verified) {
+function compress(src, w, h, verified, mirror) {
   if (!w || !h) { toast('The camera is still starting. Try again in a second.'); return; }
-  const k = Math.min(1, 1080 / Math.max(w, h)), c = document.createElement('canvas');
-  c.width = Math.round(w * k); c.height = Math.round(h * k);
+  const R = 3 / 4, wide = w / h > R, sw = wide ? h * R : w, sh = wide ? h : w / R, sx = (w - sw) / 2, sy = (h - sh) / 2;
+  const k = Math.min(1, 1080 / sh), c = document.createElement('canvas');
+  c.width = Math.round(sw * k); c.height = Math.round(sh * k);
   const x = c.getContext('2d');
-  x.drawImage(src, 0, 0, c.width, c.height);
+  if (mirror) { x.translate(c.width, 0); x.scale(-1, 1); }
+  x.drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  x.setTransform(1, 0, 0, 1, 0, 0);
   const size = Math.round(c.width * .036), now = new Date();
   x.font = '500 ' + size + 'px sans-serif';
   x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = size / 2; x.fillStyle = '#fff';
@@ -196,7 +199,7 @@ function compress(src, w, h, verified) {
   c.toBlob(b => {
     stopStream(); cam.blob = b; cam.verified = verified;
     const url = URL.createObjectURL(b);
-    layer.innerHTML = `<div class='stage'><img src='${url}' class='fit' alt='Your snap'></div><div class='controls'><button id='retake'>Retake</button><span></span><button class='right' id='use'>Send snap</button></div>`;
+    layer.innerHTML = `<div class='stage'><div class='frame'><img src='${url}' alt='Your snap'></div></div><div class='controls'><button id='retake'>Retake</button><span></span><button class='right' id='use'>Send snap</button></div>`;
     document.getElementById('retake').onclick = () => { URL.revokeObjectURL(url); openCamera(); };
     document.getElementById('use').onclick = () => sendSnap(url);
   }, 'image/jpeg', .74);

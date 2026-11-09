@@ -223,3 +223,4 @@ nav .tab[aria-current='page']{color:var(--you);font-weight:600}
 .sg.none{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:transparent;border:1px dashed var(--line);color:var(--muted);font-size:12px;text-align:center;padding:6px}
 .sg.none span:last-child{max-width:100%}
 .sg.none b{color:var(--ink)}
+#layer .frame{width:min(100%,calc((100dvh - 130px - env(safe-area-inset-bottom))*.75));aspect-ratio:3/4;overflow:hidden}
