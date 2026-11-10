@@ -118,3 +118,17 @@ async function load() {
   S.leagues = leagues; S.members = members;
   if (S.league && !leagues.find(l => l.id === S.league)) S.league = null;
 }
+
+/* League seasons */
+function monthWeeks(key) {
+  let d = mondayOf(key + '-01');
+  if (d.slice(0, 7) !== key) d = addDays(d, 7);
+  const out = [];
+  while (d.slice(0, 7) === key) { out.push(d); d = addDays(d, 7); }
+  return out;
+}
+function joinDate(lid, uid) {
+  const m = S.members.find(x => x.league_id === lid && x.user_id === uid), t = m ? new Date(m.joined_at) : null;
+  return t && !isNaN(t) ? iso(t) : '';
+}
+const leagueWeek = (lid, uid, mon) => { const j = joinDate(lid, uid); return weekDates(mon).reduce((a, x) => a + (x >= j ? score(x, day(uid, x)) : 0), 0); };

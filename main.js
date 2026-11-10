@@ -237,6 +237,20 @@ const ACTIONS = {
   day(a) { S.dayFocus = a; render(); },
   week(a) { S.week = a; render(); },
   snapDay(a) { S.snapDay = a; render(); },
+  lbMode(a) { S.lbMode = a; render(); },
+  async resetProgress() {
+    if (S.confirm !== 'reset') { S.confirm = 'reset'; render(); return; }
+    S.confirm = null;
+    try {
+      clearTimeout(saveTimer); pendingDays.clear(); pendingMeas.clear();
+      const ls = await sb.storage.from('snaps').list(S.uid, { limit: 1000 });
+      if (ls.error) throw ls.error;
+      const paths = (ls.data || []).map(f => S.uid + '/' + f.name);
+      if (paths.length) { const r = await sb.storage.from('snaps').remove(paths); if (r.error) throw r.error; }
+      await api.rpc('reset_progress', {});
+      S.snapUrls = {}; await load(); S.date = today(); render(); toast('Your progress was reset');
+    } catch (e) { render(); toast(`Couldn't reset your progress. ${e.message || ''}`); }
+  },
   snap(a) { const [u, x] = a.split('|'); openSnap(u, x); },
   camera() { openCamera(); },
   editDetails() { viewOnboard(); toTop(); },
