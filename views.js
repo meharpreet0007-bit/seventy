@@ -55,9 +55,9 @@ function viewToday() {
   const wk = weekTotal(S.uid, mon);
   let duelCard = '';
   if (S.opp) {
-    const th = weekTotal(S.opp.id, mon), gap = Math.abs(wk - th);
-    duelCard = `<button class='card' data-act='go' data-arg='duel'><div class='cardhead'><h2>Duel</h2><span class='pts'>${gap === 0 ? 'Level' : wk > th ? 'You lead by ' + gap : esc(S.opp.name) + ' leads by ' + gap}</span></div>
-    <div class='cardhead'><span>You <b>${wk}</b></span><span>${esc(S.opp.name)} <b>${th}</b></span></div></button>`;
+    const dm = duelWeekStart(), me = weekTotal(S.uid, dm), th = weekTotal(S.opp.id, dm), gap = Math.abs(me - th);
+    duelCard = `<button class='card' data-act='go' data-arg='duel'><div class='cardhead'><h2>Duel, week ${duelWeekIndex(today()) + 1}</h2><span class='pts'>${gap === 0 ? 'Level' : me > th ? 'You lead by ' + gap : esc(S.opp.name) + ' leads by ' + gap}</span></div>
+    <div class='cardhead'><span>You <b>${me}</b></span><span>${esc(S.opp.name)} <b>${th}</b></span></div></button>`;
   }
   return `<div class='pagehead'><div><h1>${date === today() ? 'Log today' : 'Edit day'}</h1><p>${long(date)}</p></div><div class='datenav'>
       <button class='arrow' data-act='nav' data-arg='-1' aria-label='Previous day' ${date <= mon ? 'disabled' : ''}>&#8249;</button>
@@ -143,7 +143,7 @@ const inviteBox = code => `<div class='codebox'><b>${esc(code)}</b><button class
 
 /* Duel */
 function viewDuel() {
-  const head = `<div class='pagehead'><div><h1>Duel</h1><p>Head to head, reset every Monday</p></div></div>`;
+  const head = `<div class='pagehead'><div><h1>Duel</h1><p>Head to head in 7-day weeks, counted from the day your duel started</p></div></div>`;
   if (!S.duel) {
     return head + `<div class='grid two'><section class='card'><h2>Start a duel</h2><p class='muted'>Create an invite and send it to one person.</p><button class='btn full' data-act='createDuel'>Create duel invite</button></section>
     <section class='card'><h2>Have a code?</h2>${joinForm('Join')}</section></div>`;
@@ -151,24 +151,24 @@ function viewDuel() {
   if (!S.opp) {
     return head + `<section class='card'><h2>Waiting for your opponent</h2><p class='muted'>Send them this invite. The duel starts when they join.</p>${inviteBox(S.duel.code)}<button class='link danger' data-act='endDuel'>${S.confirm === 'endDuel' ? 'Tap again to cancel the invite' : 'Cancel invite'}</button></section>`;
   }
-  const mon = mondayOf(today()), oid = S.opp.id, me = weekTotal(S.uid, mon), th = weekTotal(oid, mon), gap = Math.abs(me - th);
+  const wi = Math.max(0, duelWeekIndex(today())), ds = duelStart(), mon = addDays(ds, 7 * wi), dn = diffDays(today(), mon) + 1, oid = S.opp.id, me = weekTotal(S.uid, mon), th = weekTotal(oid, mon), gap = Math.abs(me - th);
   const verdict = gap === 0 ? 'Level so far' : me > th ? 'You lead by ' + gap : esc(S.opp.name) + ' leads by ' + gap;
   const focus = S.dayFocus && weekDates(mon).includes(S.dayFocus) ? S.dayFocus : today();
-  const cols = weekDates(mon).map(x => {
+  const cols = weekDates(mon).map((x, di) => {
     const a = score(x, day(S.uid, x)), b = score(x, day(oid, x));
-    return `<button class='col' data-act='day' data-arg='${x}' aria-pressed='${x === focus}' aria-label='${long(x)}: you ${a}, ${esc(S.opp.name)} ${b}'><span class='zone up'>${a ? `<i class='b' style='height:${a * 5}px'></i>` : ''}</span><span class='zone down'>${b ? `<i class='b' style='height:${b * 5}px'></i>` : ''}</span><span class='day'>${DAYS[parse(x).getDay()][0]}</span></button>`;
+    return `<button class='col' data-act='day' data-arg='${x}' aria-pressed='${x === focus}' aria-label='${long(x)}: you ${a}, ${esc(S.opp.name)} ${b}'><span class='zone up'>${a ? `<i class='b' style='height:${a * 5}px'></i>` : ''}</span><span class='zone down'>${b ? `<i class='b' style='height:${b * 5}px'></i>` : ''}</span><span class='day'>Day ${di + 1}</span></button>`;
   }).join('');
-  const start = mondayOf(iso(new Date(S.duel.started_at || S.duel.created_at)));
+  const start = ds;
   let w = 0, l = 0, t = 0; const past = [];
   for (let m = start; m < mon; m = addDays(m, 7)) {
     const a = weekTotal(S.uid, m), b = weekTotal(oid, m);
     if (a > b) w++; else if (a < b) l++; else t++;
-    past.unshift(`<div class='tr'><span>Week of ${short(m)}</span><span class='muted'>${a} to ${b}</span><span class='r'>${a === b ? 'Tie' : a > b ? 'You won' : esc(S.opp.name) + ' won'}</span></div>`);
+    past.unshift(`<div class='tr'><span>Week ${duelWeekIndex(m) + 1}<span class='muted'>, ${short(m)}</span></span><span class='muted'>${a} to ${b}</span><span class='r'>${a === b ? 'Tie' : a > b ? 'You won' : esc(S.opp.name) + ' won'}</span></div>`);
   }
   const fd = day(oid, focus) || {}, fp = parts(focus, fd);
-  return head + `<section class='panel'><div class='versus'><div class='side'><span class='who'><i class='sw you'></i>You</span><span class='total'>${me}</span></div><div class='side'><span class='who'>${esc(S.opp.name)}<i class='sw them'></i></span><span class='total'>${th}</span></div></div><div class='cardhead'><span>${verdict}</span><span class='muted2'>Out of 70</span></div></section>
+  return head + `<section class='panel'><div class='versus'><div class='side'><span class='who'><i class='sw you'></i>You</span><span class='total'>${me}</span></div><div class='side'><span class='who'>${esc(S.opp.name)}<i class='sw them'></i></span><span class='total'>${th}</span></div></div><div class='cardhead'><span>${verdict}</span><span class='muted2'>Week ${wi + 1}, day ${dn} of 7</span></div></section>
   <div class='stats'>${stat(w, 'Weeks you won')}${stat(l, 'Weeks ' + esc(S.opp.name) + ' won')}${stat(t, 'Ties')}${stat(rankOf(oid).tier || 'Unranked', esc(S.opp.name) + ' rank')}</div>
-  <div class='grid two'><div class='stack'><section class='card'><h2>This week by day</h2><div class='mirror'>${cols}</div><p class='readout'>${long(focus)}: you ${score(focus, day(S.uid, focus))}, ${esc(S.opp.name)} ${score(focus, fd)}</p><div class='chips'>${fp.map(p => `<span class='chip'>${esc(S.opp.name)} ${p.k}: ${p.got} of ${p.n}</span>`).join('')}</div></section>
+  <div class='grid two'><div class='stack'><section class='card'><h2>Week ${wi + 1} by day</h2><div class='mirror'>${cols}</div><p class='readout'>${long(focus)}: you ${score(focus, day(S.uid, focus))}, ${esc(S.opp.name)} ${score(focus, fd)}</p><div class='chips'>${fp.map(p => `<span class='chip'>${esc(S.opp.name)} ${p.k}: ${p.got} of ${p.n}</span>`).join('')}</div></section>
   <section class='card'><h2>Snaps this week</h2>${snapStrip(snapsFor([S.uid, oid], mon))}</section></div>
   <div class='stack'><section class='card'><div class='cardhead'><h2>${esc(S.opp.name)}</h2>${badge(rankOf(oid))}</div><button class='btn ghost full' data-act='player' data-arg='${oid}'>View scores and progress</button></section>
   ${past.length ? `<section class='card'><h2>Past weeks</h2><div class='table'>${past.join('')}</div></section>` : ''}

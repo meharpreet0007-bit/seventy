@@ -132,3 +132,9 @@ function joinDate(lid, uid) {
   return t && !isNaN(t) ? iso(t) : '';
 }
 const leagueWeek = (lid, uid, mon) => { const j = joinDate(lid, uid); return weekDates(mon).reduce((a, x) => a + (x >= j ? score(x, day(uid, x)) : 0), 0); };
+
+/* Duel weeks run in 7-day blocks from the day the duel started */
+const diffDays = (a, b) => Math.round((parse(a) - parse(b)) / 864e5);
+function duelStart() { const t = S.duel ? new Date(S.duel.started_at || S.duel.created_at) : null; return t && !isNaN(t) ? iso(t) : today(); }
+const duelWeekIndex = d => Math.floor(diffDays(d, duelStart()) / 7);
+const duelWeekStart = () => addDays(duelStart(), 7 * Math.max(0, duelWeekIndex(today())));
