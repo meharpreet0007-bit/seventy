@@ -138,3 +138,8 @@ const diffDays = (a, b) => Math.round((parse(a) - parse(b)) / 864e5);
 function duelStart() { const t = S.duel ? new Date(S.duel.started_at || S.duel.created_at) : null; return t && !isNaN(t) ? iso(t) : today(); }
 const duelWeekIndex = d => Math.floor(diffDays(d, duelStart()) / 7);
 const duelWeekStart = () => addDays(duelStart(), 7 * Math.max(0, duelWeekIndex(today())));
+
+/* League weeks run in 7-day blocks from the day the league was created */
+function leagueStart(lid) { const l = S.leagues.find(x => x.id === lid), t = l ? new Date(l.created_at) : null; return t && !isNaN(t) ? iso(t) : today(); }
+const leagueWeekIdx = (lid, d) => Math.floor(diffDays(d, leagueStart(lid)) / 7);
+const leagueWeekStart = (lid, i) => addDays(leagueStart(lid), 7 * i);

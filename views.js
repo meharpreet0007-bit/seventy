@@ -181,7 +181,7 @@ function viewLeagues() {
   if (S.league) return viewLeague(S.league);
   const mon = mondayOf(today());
   const rows = S.leagues.map(l => {
-    const ids = leagueMembers(l.id), sorted = ids.slice().sort((a, b) => leagueWeek(l.id, b, mon) - leagueWeek(l.id, a, mon)), pos = sorted.indexOf(S.uid) + 1;
+    const ids = leagueMembers(l.id), lm = leagueWeekStart(l.id, Math.max(0, leagueWeekIdx(l.id, today()))), sorted = ids.slice().sort((a, b) => leagueWeek(l.id, b, lm) - leagueWeek(l.id, a, lm)), pos = sorted.indexOf(S.uid) + 1;
     return `<button class='leaguerow' data-act='league' data-arg='${l.id}'><span><b>${esc(l.name)}</b><br><span class='muted small'>${ids.length} member${ids.length === 1 ? '' : 's'}</span></span><span class='pts'>${pos ? 'You are #' + pos : ''} &#8250;</span></button>`;
   }).join('');
   return `<div class='pagehead'><div><h1>Leagues</h1><p>Weekly leaderboards with your group</p></div></div>
@@ -201,15 +201,17 @@ function dailySnaps(ids, mon) {
 }
 
 function viewLeague(id) {
-  const l = S.leagues.find(x => x.id === id), mon = mondayOf(today()), ids = leagueMembers(id);
-  const all = monthWeeks(mon.slice(0, 7)), weeks = all.filter(w => w <= mon), monthly = S.lbMode === 'month';
-  const monthName = parse(mon).toLocaleString('en', { month: 'long' });
-  const wk = (u, w) => leagueWeek(id, u, w || mon), mo = u => weeks.reduce((a, w) => a + wk(u, w), 0);
-  const results = weeks.map(w => {
-    const best = Math.max(0, ...ids.map(u => wk(u, w)));
-    return { w, best, who: best ? ids.filter(u => wk(u, w) === best) : [] };
+  const l = S.leagues.find(x => x.id === id), ids = leagueMembers(id);
+  const wi = Math.max(0, leagueWeekIdx(id, today())), mon = leagueWeekStart(id, wi), dn = diffDays(today(), mon) + 1;
+  const season = Math.floor(wi / 4), first = season * 4, weeks = [];
+  for (let i = first; i <= wi; i++) weeks.push(i);
+  const monthly = S.lbMode === 'month';
+  const wk = (u, i) => leagueWeek(id, u, leagueWeekStart(id, i == null ? wi : i)), mo = u => weeks.reduce((a, i) => a + wk(u, i), 0);
+  const results = weeks.map(i => {
+    const best = Math.max(0, ...ids.map(u => wk(u, i)));
+    return { i, best, who: best ? ids.filter(u => wk(u, i) === best) : [] };
   });
-  const wins = u => results.filter(x => x.w < mon && x.who.includes(u)).length;
+  const wins = u => results.filter(x => x.i < wi && x.who.includes(u)).length;
   const val = monthly ? mo : u => wk(u);
   const sorted = ids.slice().sort((a, b) => val(b) - val(a) || wk(b) - wk(a));
   const rows = sorted.map((u, i) => {
@@ -217,13 +219,13 @@ function viewLeague(id) {
     const sub = monthly ? `${n} week${n === 1 ? '' : 's'} won, this week ${wk(u)}` : `${rankOf(u).tier || 'Unranked'}, today ${score(today(), day(u, today()))} of 10`;
     return `<button class='lb${me ? ' me' : ''}' data-act='${me ? 'go' : 'player'}' data-arg='${me ? 'dashboard' : u}'><span class='pos'>${i + 1}</span>${avatar(p, me ? 'you' : '')}<span class='nm'>${me ? 'You' : esc(p.name)}<small>${sub}</small></span><span class='wk'>${val(u)}<small>${monthly ? 'points' : 'of 70'}</small></span></button>`;
   }).join('');
-  const battles = results.map((x, i) => {
-    const cur = x.w === mon, names = x.who.map(nameOf).join(', '), plural = x.who.length > 1 || x.who[0] === S.uid;
-    return `<div class='tr'><span>Week ${i + 1}<span class='muted'>, ${short(x.w)}</span></span><span class='muted'>${x.best ? x.best + ' pts' : ''}</span><span class='r'>${!x.best ? 'No scores yet' : cur ? names + (plural ? ' lead' : ' leads') : names + ' won'}</span></div>`;
+  const battles = results.map(x => {
+    const cur = x.i === wi, names = x.who.map(nameOf).join(', '), plural = x.who.length > 1 || x.who[0] === S.uid;
+    return `<div class='tr'><span>Week ${x.i - first + 1}<span class='muted'>, ${short(leagueWeekStart(id, x.i))}</span></span><span class='muted'>${x.best ? x.best + ' pts' : ''}</span><span class='r'>${!x.best ? 'No scores yet' : cur ? names + (plural ? ' lead' : ' leads') : names + ' won'}</span></div>`;
   }).reverse().join('');
-  return `<button class='back' data-act='backLeagues'>&#8249; All leagues</button><div class='pagehead'><div><h1>${esc(l.name)}</h1><p>${monthName} season, week ${weeks.length} of ${all.length}, ${ids.length} member${ids.length === 1 ? '' : 's'}</p></div></div>
-  <div class='grid two'><div class='stack'><section class='card'><h2>Leaderboard</h2><div class='seg' role='group'><button data-act='lbMode' data-arg='week' aria-pressed='${!monthly}'>This week</button><button data-act='lbMode' data-arg='month' aria-pressed='${monthly}'>${monthName}</button></div><div class='list'>${rows}</div></section>${dailySnaps(sorted, mon)}</div>
-  <div class='stack'><section class='card'><div class='cardhead'><h2>Weekly battles</h2><span class='pts'>${monthName}</span></div><div class='table'>${battles}</div><p class='muted small'>Scores reset every Monday and add up over the month. Anyone who joins starts from zero.</p></section>
+  return `<button class='back' data-act='backLeagues'>&#8249; All leagues</button><div class='pagehead'><div><h1>${esc(l.name)}</h1><p>Season ${season + 1}, week ${wi - first + 1} of 4, day ${dn} of 7, ${ids.length} member${ids.length === 1 ? '' : 's'}</p></div></div>
+  <div class='grid two'><div class='stack'><section class='card'><h2>Leaderboard</h2><div class='seg' role='group'><button data-act='lbMode' data-arg='week' aria-pressed='${!monthly}'>This week</button><button data-act='lbMode' data-arg='month' aria-pressed='${monthly}'>Season ${season + 1}</button></div><div class='list'>${rows}</div></section>${dailySnaps(sorted, mon)}</div>
+  <div class='stack'><section class='card'><div class='cardhead'><h2>Weekly battles</h2><span class='pts'>Season ${season + 1}</span></div><div class='table'>${battles}</div><p class='muted small'>Weeks run 7 days from the day the league started, and a season is 4 weeks. Scores reset each week and add up over the season. Anyone who joins starts from zero.</p></section>
   <section class='card'><h2>Invite people</h2>${inviteBox(l.code)}<p class='muted small'>Members can see each other's points and snaps. Body measurements stay private.</p></section><button class='link danger' data-act='leaveLeague' data-arg='${id}'>${S.confirm === 'leave' + id ? 'Tap again to leave this league' : 'Leave league'}</button></div></div>`;
 }
 
