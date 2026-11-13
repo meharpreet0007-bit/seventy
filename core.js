@@ -33,7 +33,7 @@ const CHEAT = { good: 5, some: 3, more: 0 };
 function parts(date, d) {
   d = d || {};
   if (isSunday(date)) return [{ k: 'Cardio', n: 3, got: d.cardio ? 3 : 0 }, { k: 'Measure', n: 2, got: d.measured ? 2 : 0 }, { k: 'Diet', n: 5, got: CHEAT[d.cheat_meals] || 0 }];
-  return [{ k: 'Gym', n: 3, got: d.gym ? 3 : 0 }, { k: 'Diet', n: 5, got: DIET[d.diet] || 0 }, { k: 'Steps', n: 2, got: d.steps ? 2 : 0 }];
+  return [{ k: 'Gym', n: 3, got: d.snap_path ? 3 : 0 }, { k: 'Diet', n: 5, got: DIET[d.diet] || 0 }, { k: 'Steps', n: 2, got: d.steps_path ? 2 : 0 }];
 }
 const score = (date, d) => parts(date, d).reduce((a, p) => a + p.got, 0);
 const TIERS = [{ n: 'Bronze', min: 0 }, { n: 'Silver', min: 35 }, { n: 'Gold', min: 49 }, { n: 'Elite', min: 60 }];
@@ -70,7 +70,7 @@ function pointsBreakdown(uid, mon) {
   weekDates(mon).forEach(x => {
     const d = day(uid, x) || {};
     if (isSunday(x)) { b.Training += d.cardio ? 3 : 0; b.Measurements += d.measured ? 2 : 0; b.Diet += CHEAT[d.cheat_meals] || 0; }
-    else { b.Training += d.gym ? 3 : 0; b.Diet += DIET[d.diet] || 0; b.Steps += d.steps ? 2 : 0; }
+    else { b.Training += d.snap_path ? 3 : 0; b.Diet += DIET[d.diet] || 0; b.Steps += d.steps_path ? 2 : 0; }
   });
   return b;
 }
@@ -90,6 +90,11 @@ const api = {
   async rpc(fn, args) { return must(await sb.rpc(fn, args || {})); },
   async uploadSnap(uid, date, blob) {
     const path = uid + '/' + date + '.jpg';
+    must(await sb.storage.from('snaps').upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '0' }));
+    return path;
+  },
+  async uploadProof(uid, date, kind, blob) {
+    const path = uid + '/' + date + (kind === 'steps' ? '-steps' : '') + '.jpg';
     must(await sb.storage.from('snaps').upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '0' }));
     return path;
   },

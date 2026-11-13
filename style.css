@@ -224,3 +224,20 @@ nav .tab[aria-current='page']{color:var(--you);font-weight:600}
 .sg.none span:last-child{max-width:100%}
 .sg.none b{color:var(--ink)}
 #layer .frame{width:min(100%,calc((100dvh - 130px - env(safe-area-inset-bottom))*.75));aspect-ratio:3/4;overflow:hidden}
+
+/* Polish */
+.card,.stat{border-radius:18px;border-color:transparent;box-shadow:0 1px 2px rgba(16,24,40,.04),0 10px 28px -14px rgba(16,24,40,.16)}
+.panel{border-radius:22px;background:radial-gradient(130% 140% at 100% 0%,#6576FF 0%,var(--brand2) 38%,var(--brand) 100%);box-shadow:0 20px 44px -20px rgba(37,54,184,.6)}
+.pagehead h1{font-size:28px;letter-spacing:-.02em}
+.stat b{font-weight:700}
+.btn{border-radius:12px;box-shadow:0 8px 18px -10px var(--you)}
+.btn.ghost{box-shadow:none}
+.btn.sm{min-height:40px;padding:0 14px;font-size:14px}
+.seg button{border-radius:12px;transition:background .15s,color .15s}
+.thumb{border-radius:10px}
+nav#tabs{background:color-mix(in srgb,var(--card) 84%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px)}
+.proof{display:flex;align-items:center;gap:12px}
+.proofbtns{display:flex;gap:8px;flex-wrap:wrap}
+.dot.on{background:var(--you);border-color:var(--you)}
+.dot.on svg{opacity:1}
+@media (prefers-color-scheme:dark){.card,.stat{border-color:var(--line);box-shadow:none}}

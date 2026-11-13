@@ -38,6 +38,14 @@ function weekBars(uid, mon, cur) {
     return `<div class='d7${x === cur ? ' cur' : ''}'><span class='v'>${day(uid, x) ? v : ''}</span><span class='slot'>${v ? `<i style='height:${v * 7.2}px'></i>` : ''}</span>${DAYS[parse(x).getDay()][0]}</div>`;
   }).join('')}</div>`;
 }
+function proofHTML(kind, date, d) {
+  const gym = kind === 'gym', path = gym ? d.snap_path : d.steps_path, pts = gym ? 3 : 2;
+  const sub = path ? (gym ? `${d.snap_at ? clock(d.snap_at) + ', ' : ''}${d.snap_verified ? 'live snap' : 'uploaded photo'}` : 'Screenshot added') : (gym ? 'Add a gym photo to earn the points' : 'Upload a screenshot of your step count');
+  const btns = gym && date === today()
+    ? `<button class='btn sm' data-act='camera'>${path ? 'Retake' : 'Take snap'}</button><button class='btn sm ghost' data-act='upload' data-arg='gym'>Upload photo</button>`
+    : `<button class='btn sm${path ? ' ghost' : ''}' data-act='upload' data-arg='${kind}'>${path ? 'Replace' : gym ? 'Upload photo' : 'Upload screenshot'}</button>`;
+  return `<div class='block'><div class='proof'><span class='dot${path ? ' on' : ''}'>${CHECK}</span>${path ? `<button data-act='snap' data-arg='${S.uid}|${date}|${kind}' aria-label='View'><img class='thumb' data-snap='${esc(path)}' alt=''></button>` : ''}<span class='lbl'>${gym ? 'Gym session' : 'Step goal'}<small>${sub}</small></span><span class='pts'>${path ? pts + ' of ' + pts : pts + ' pts'}</span></div><div class='proofbtns'>${btns}</div></div>`;
+}
 function viewToday() {
   const date = S.date, d = day(S.uid, date) || {}, sun = isSunday(date), mon = mondayOf(today());
   let body;
@@ -48,9 +56,9 @@ function viewToday() {
       <div class='fields'>${fieldHTML('waist', 'Waist, cm', m.waist)}${fieldHTML('second', (S.me.second_measure === 'glutes' ? 'Glutes' : 'Biceps') + ', cm', m.second)}${fieldHTML('weight', 'Weight, kg', m.weight)}</div></div>
       <div class='block'><span class='lbl'>Diet</span>${segHTML('cheat_meals', d.cheat_meals, [['good', 'Good diet', '5 pts'], ['some', '1 to 2 cheat meals', '3 pts'], ['more', 'More', '0 pts']])}</div>`;
   } else {
-    body = rowHTML('gym', 'Gym session', 3, d.gym) + snapHTML(date, d) +
+    body = proofHTML('gym', date, d) +
       `<div class='block'><span class='lbl'>Diet</span>${segHTML('diet', d.diet, [['perfect', 'Perfect', '5 pts'], ['average', 'Average', '3 pts'], ['cheat', 'Cheat', '0 pts']])}</div>` +
-      rowHTML('steps', 'Step goal', 2, d.steps);
+      proofHTML('steps', date, d);
   }
   const wk = weekTotal(S.uid, mon);
   let duelCard = '';
@@ -60,7 +68,7 @@ function viewToday() {
     <div class='cardhead'><span>You <b>${me}</b></span><span>${esc(S.opp.name)} <b>${th}</b></span></div></button>`;
   }
   return `<div class='pagehead'><div><h1>${date === today() ? 'Log today' : 'Edit day'}</h1><p>${long(date)}</p></div><div class='datenav'>
-      <button class='arrow' data-act='nav' data-arg='-1' aria-label='Previous day' ${date <= mon ? 'disabled' : ''}>&#8249;</button>
+      <button class='arrow' data-act='nav' data-arg='-1' aria-label='Previous day' ${date <= addDays(today(), -6) ? 'disabled' : ''}>&#8249;</button>
       <button class='arrow' data-act='nav' data-arg='1' aria-label='Next day' ${date >= today() ? 'disabled' : ''}>&#8250;</button></div></div>
   <div class='grid two'><div class='stack'><section class='panel' id='hero'>${heroHTML(date, d)}</section><section class='card'><div class='list'>${body}</div></section></div>
   <div class='stack'><section class='card'><div class='cardhead'><h2>This week</h2><span class='pts'>${wk} of 70</span></div>${weekBars(S.uid, mon, date)}</section>${duelCard}</div></div>`;

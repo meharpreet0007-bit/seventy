@@ -9,7 +9,7 @@ function toast(msg, action, fn) {
 }
 
 /* Saving */
-const COLS = ['gym', 'diet', 'steps', 'cardio', 'cheat_meals', 'measured', 'snap_path', 'snap_verified', 'snap_at'];
+const COLS = ['gym', 'diet', 'steps', 'cardio', 'cheat_meals', 'measured', 'snap_path', 'snap_verified', 'snap_at', 'steps_path'];
 const pendingDays = new Set(), pendingMeas = new Set();
 let saveTimer = null;
 function queue() { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 500); }
@@ -196,32 +196,59 @@ function compress(src, w, h, verified, mirror) {
   x.font = '500 ' + size + 'px sans-serif';
   x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = size / 2; x.fillStyle = '#fff';
   x.fillText(short(iso(now)) + ', ' + clock(now), size, c.height - size);
-  c.toBlob(b => {
-    stopStream(); cam.blob = b; cam.verified = verified;
-    const url = URL.createObjectURL(b);
-    layer.innerHTML = `<div class='stage'><div class='frame'><img src='${url}' alt='Your snap'></div></div><div class='controls'><button id='retake'>Retake</button><span></span><button class='right' id='use'>Send snap</button></div>`;
-    document.getElementById('retake').onclick = () => { URL.revokeObjectURL(url); openCamera(); };
-    document.getElementById('use').onclick = () => sendSnap(url);
-  }, 'image/jpeg', .74);
+  c.toBlob(b => review(b, { kind: 'gym', date: today(), verified }), 'image/jpeg', .74);
 }
-async function sendSnap(url) {
-  const btn = document.getElementById('use'), date = today();
+function review(b, o) {
+  stopStream(); cam.blob = b; cam.opts = o;
+  const url = URL.createObjectURL(b), framed = o.kind === 'gym' && o.verified;
+  layer.classList.add('open');
+  layer.innerHTML = `<div class='stage'>${framed ? `<div class='frame'><img src='${url}' alt='Your photo'></div>` : `<img src='${url}' class='fit' alt='Your photo'>`}</div><div class='controls'><button id='retake'>${framed ? 'Retake' : 'Cancel'}</button><span></span><button class='right' id='use'>${o.kind === 'steps' ? 'Save screenshot' : 'Send snap'}</button></div>`;
+  document.getElementById('retake').onclick = () => { URL.revokeObjectURL(url); if (framed) openCamera(); else closeLayer(); };
+  document.getElementById('use').onclick = () => sendProof(url);
+}
+function pickPhoto(kind, date) {
+  const i = document.createElement('input');
+  i.type = 'file'; i.accept = 'image/*'; i.className = 'vh';
+  document.body.appendChild(i);
+  i.onchange = () => {
+    i.remove();
+    const f = i.files[0]; if (!f) return;
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src);
+      c.toBlob(b => review(b, { kind, date, verified: false }), 'image/jpeg', .8);
+    };
+    img.onerror = () => toast(`That image couldn't be read. Try another one.`);
+    img.src = URL.createObjectURL(f);
+  };
+  i.click();
+}
+async function sendProof(url) {
+  const btn = document.getElementById('use'), o = cam.opts, label = btn.textContent;
   btn.disabled = true; btn.textContent = 'Sending';
   try {
-    const path = await api.uploadSnap(S.uid, date, cam.blob);
+    const path = await api.uploadProof(S.uid, o.date, o.kind, cam.blob);
     delete S.snapUrls[path];
-    setDay({ gym: true, snap_path: path, snap_verified: cam.verified, snap_at: new Date().toISOString() }, date);
+    setDay(o.kind === 'steps' ? { steps: true, steps_path: path } : { gym: true, snap_path: path, snap_verified: o.verified, snap_at: new Date().toISOString() }, o.date);
     const saved = await flush();
     URL.revokeObjectURL(url); closeLayer(); render();
-    if (saved) toast('Snap sent');
-  } catch (e) { btn.disabled = false; btn.textContent = 'Send snap'; toast(`Your snap didn't send. ${e.message || 'Check your connection and try again.'}`); }
+    if (saved) toast(o.kind === 'steps' ? 'Steps screenshot saved' : 'Snap sent');
+  } catch (e) { btn.disabled = false; btn.textContent = label; toast(`That didn't upload. ${e.message || 'Check your connection and try again.'}`); }
 }
-async function openSnap(uid, date) {
-  const d = day(uid, date); if (!d || !d.snap_path) return;
+async function openSnap(uid, date, kind) {
+  kind = kind || 'gym';
+  const d = day(uid, date), path = d && (kind === 'steps' ? d.steps_path : d.snap_path);
+  if (!path) return;
+  const other = kind === 'steps' ? d.snap_path : d.steps_path;
+  const info = kind === 'steps' ? 'Steps screenshot' : (d.snap_at ? clock(d.snap_at) + ', ' : '') + (d.snap_verified ? 'Live snap' : 'Uploaded photo');
   layer.classList.add('open');
-  layer.innerHTML = `<div class='caption'><span>${nameOf(uid)}, ${short(date)}, ${clock(d.snap_at)}</span><span>${d.snap_verified ? 'Verified' : 'Not verified'}</span></div><div class='stage'><img id='full' class='fit' alt='Gym snap'></div><div class='controls'><button id='cancel'>Close</button></div>`;
+  layer.innerHTML = `<div class='caption'><span>${nameOf(uid)}, ${short(date)}</span><span>${info}</span></div><div class='stage'><img id='full' class='fit' alt=''></div><div class='controls'><button id='cancel'>Close</button><span></span>${other ? `<button class='right' id='other'>${kind === 'steps' ? 'Gym photo' : 'Steps screenshot'}</button>` : '<span></span>'}</div>`;
   document.getElementById('cancel').onclick = closeLayer;
-  try { document.getElementById('full').src = await urlFor(d.snap_path); } catch (e) { toast(`That snap couldn't load.`); closeLayer(); }
+  if (other) document.getElementById('other').onclick = () => openSnap(uid, date, kind === 'steps' ? 'gym' : 'steps');
+  try { document.getElementById('full').src = await urlFor(path); } catch (e) { toast(`That photo couldn't load.`); closeLayer(); }
 }
 
 /* Actions */
@@ -251,8 +278,9 @@ const ACTIONS = {
       S.snapUrls = {}; await load(); S.date = today(); render(); toast('Your progress was reset');
     } catch (e) { render(); toast(`Couldn't reset your progress. ${e.message || ''}`); }
   },
-  snap(a) { const [u, x] = a.split('|'); openSnap(u, x); },
+  snap(a) { const [u, x, k] = a.split('|'); openSnap(u, x, k); },
   camera() { openCamera(); },
+  upload(a) { pickPhoto(a, S.date); },
   editDetails() { viewOnboard(); toTop(); },
   player(a) { S.prev = { view: S.view, league: S.league }; S.player = a; S.week = null; render(); toTop(); },
   backPlayer() { S.player = null; S.week = null; render(); toTop(); },
@@ -302,7 +330,7 @@ document.addEventListener('visibilitychange', async () => {
   const a = document.activeElement;
   if (!S.me || layer.classList.contains('open') || (a && a.tagName === 'INPUT')) return;
   if (pendingDays.size || pendingMeas.size) await flush();
-  try { await load(); if (S.date > today() || S.date < mondayOf(today())) S.date = today(); render(); } catch (e) { }
+  try { await load(); if (S.date > today() || S.date < addDays(today(), -6)) S.date = today(); render(); } catch (e) { }
 });
 
 boot().catch(() => { app.innerHTML = `<p class='err'>Seventy couldn't connect. Check your connection and reload.</p>`; });
