@@ -241,3 +241,35 @@ nav#tabs{background:color-mix(in srgb,var(--card) 84%,transparent);-webkit-backd
 .dot.on{background:var(--you);border-color:var(--you)}
 .dot.on svg{opacity:1}
 @media (prefers-color-scheme:dark){.card,.stat{border-color:var(--line);box-shadow:none}}
+
+/* Refresh */
+:root{--display:'Bricolage Grotesque','Hanken Grotesk',ui-sans-serif,system-ui,sans-serif}
+.pagehead h1,.ident h2,.total,.stat b,.auth .big,.auth h1,.lb .wk,nav .brand,.rnum b{font-family:var(--display)}
+.pagehead h1{font-size:30px;font-weight:700;letter-spacing:-.025em}
+.card h2{font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+.stat b{font-weight:700;letter-spacing:-.03em}
+.total{font-weight:600}
+.panel{color:#fff;background:radial-gradient(90% 120% at 100% 0%,rgba(122,140,255,.55),transparent 60%),linear-gradient(150deg,#1A2050 0%,#232C7A 55%,#3240C4 100%)}
+.herogrid{display:grid;grid-template-columns:128px minmax(0,1fr);gap:22px;align-items:center}
+.ring{position:relative;width:128px;height:128px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.rtrack{fill:none;stroke:rgba(255,255,255,.16);stroke-width:10}
+.rfill{fill:none;stroke:#fff;stroke-width:10;stroke-linecap:round}
+.rnum{position:absolute;inset:0;display:grid;place-content:center;text-align:center;line-height:1}
+.rnum b{font-size:46px;font-weight:600;letter-spacing:-.03em}
+.rnum span{font-size:12.5px;opacity:.75;margin-top:4px}
+.hstats{display:flex;flex-direction:column;gap:10px;min-width:0}
+.hrow{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:14px}
+.hbar{height:6px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}
+.hbar i{display:block;height:100%;border-radius:3px;background:#fff}
+.hrow b{font-weight:600;min-width:34px;text-align:right}
+.hrow small{opacity:.7;font-weight:400}
+.lb{grid-template-columns:26px 40px minmax(0,1fr) auto}
+.lb .pos{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:13px}
+.lb:nth-child(1) .pos{background:#FBEDC2;color:#7A5A00}
+.lb:nth-child(2) .pos{background:#E5E8EE;color:#4A5468}
+.lb:nth-child(3) .pos{background:#F4E3D3;color:#7A4A1E}
+.row:active,.lb:active,.leaguerow:active{opacity:.7}
+nav .tab{position:relative;isolation:isolate}
+@media (max-width:959px){nav .tab[aria-current='page']::before{content:'';position:absolute;top:7px;left:50%;transform:translateX(-50%);width:58px;height:32px;border-radius:16px;background:color-mix(in srgb,var(--you) 15%,transparent);z-index:-1}}
+@media (max-width:380px){.herogrid{grid-template-columns:108px minmax(0,1fr);gap:16px}.ring{width:108px;height:108px}.rnum b{font-size:38px}}

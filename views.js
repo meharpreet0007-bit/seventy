@@ -10,10 +10,9 @@ const nameOf = uid => uid === S.uid ? 'You' : esc((S.profiles[uid] || {}).name |
 
 /* Today */
 function heroHTML(date, d) {
-  const ps = parts(date, d), t = score(date, d);
-  return `<div class='scoreline'><div class='bignum'><span id='scorenum'>${t}</span><small>of 10</small></div><div class='muted2'>${date === today() ? 'Today' : long(date)}</div></div>
-  <div class='segbar' role='img' aria-label='${t} of 10 points'>${ps.map(p => `<div class='group' style='--n:${p.n}'>${Array.from({ length: p.n }, (_, i) => `<div class='tick${i < p.got ? ' on' : ''}'></div>`).join('')}</div>`).join('')}</div>
-  <div class='legend'>${ps.map(p => `<span style='--n:${p.n}'>${p.k}</span>`).join('')}</div>`;
+  const ps = parts(date, d), t = score(date, d), C = 2 * Math.PI * 52;
+  return `<div class='herogrid'><div class='ring' role='img' aria-label='${t} of 10 points'><svg viewBox='0 0 120 120'><circle cx='60' cy='60' r='52' class='rtrack'/><circle cx='60' cy='60' r='52' class='rfill' stroke-dasharray='${(C * t / 10).toFixed(1)} ${C.toFixed(1)}'/></svg><div class='rnum'><b id='scorenum'>${t}</b><span>of 10</span></div></div>
+  <div class='hstats'><div class='muted2'>${date === today() ? 'Today' : long(date)}</div>${ps.map(p => `<div class='hrow'><span>${p.k}</span><span class='hbar'><i style='width:${p.got / p.n * 100}%'></i></span><b>${p.got}<small>/${p.n}</small></b></div>`).join('')}</div></div>`;
 }
 function rowHTML(field, label, points, on) {
   return `<button class='row' data-act='toggle' data-arg='${field}' aria-pressed='${!!on}'><span class='dot'>${CHECK}</span><span class='lbl'>${label}</span><span class='pts'>${points} pts</span></button>`;
