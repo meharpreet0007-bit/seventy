@@ -50,10 +50,11 @@ function setDay(fields, date) {
 const ICONS = {
   today: `<path d='M9 12l2 2 4-4'/><circle cx='12' cy='12' r='9'/>`,
   dashboard: `<path d='M4 20V10M10 20V4M16 20v-7M21 20H3'/>`,
+  history: `<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>`,
   duel: `<path d='M5 3l8 8M3 5l2-2M13 11l-2 2M19 3l-8 8M21 5l-2-2M6 16l2 2M18 16l-2 2M4 21l4-3M20 21l-4-3'/>`,
   leagues: `<path d='M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4c0 3 1 5 3 5M17 6h3c0 3-1 5-3 5'/>`
 };
-const LABELS = { today: 'Today', dashboard: 'Dashboard', duel: 'Duel', leagues: 'Leagues' };
+const LABELS = { today: 'Today', dashboard: 'Dashboard', history: 'History', duel: 'Duel', leagues: 'Leagues' };
 function renderNav() {
   tabs.hidden = false;
   tabs.innerHTML = `<div class='brand'>Seventy</div>` + Object.keys(ICONS).map(k =>
@@ -62,7 +63,7 @@ function renderNav() {
 }
 function render() {
   const y = window.scrollY;
-  app.innerHTML = S.player ? viewPlayer(S.player) : S.view === 'today' ? viewToday() : S.view === 'dashboard' ? viewDashboard() : S.view === 'duel' ? viewDuel() : viewLeagues();
+  app.innerHTML = S.player ? viewPlayer(S.player) : S.view === 'today' ? viewToday() : S.view === 'dashboard' ? viewDashboard() : S.view === 'history' ? viewHistory() : S.view === 'duel' ? viewDuel() : viewLeagues();
   renderNav();
   window.scrollTo(0, y);
   app.querySelectorAll('img[data-snap]').forEach(async img => { try { img.src = await urlFor(img.dataset.snap); } catch (e) { } });
@@ -284,8 +285,14 @@ const ACTIONS = {
   editDetails() { viewOnboard(); toTop(); },
   player(a) { S.prev = { view: S.view, league: S.league }; S.player = a; S.week = null; render(); toTop(); },
   backPlayer() { S.player = null; S.week = null; render(); toTop(); },
-  league(a) { S.league = a; S.confirm = null; render(); toTop(); },
-  backLeagues() { S.league = null; S.confirm = null; render(); toTop(); },
+  league(a) { S.league = a; S.confirm = null; S.lwk = null; S.snapDay = null; render(); toTop(); },
+  backLeagues() { S.league = null; S.confirm = null; S.lwk = null; S.snapDay = null; render(); toTop(); },
+  lweek(a) { S.lwk = +a; S.snapDay = null; render(); },
+  histWho(a) { S.hu = a; if (S.hc === a) S.hc = null; S.hw = 4; S.view = 'history'; S.player = null; render(); toTop(); },
+  histCmp(a) { S.hc = a === 'none' ? null : a; render(); },
+  histRange(a) { S.hn = +a; render(); },
+  histMetric(a) { S.hm = a; render(); },
+  histMore() { S.hw = (S.hw || 4) + 4; render(); },
   async copy(a) {
     const link = location.origin + location.pathname + '?join=' + a;
     try { await navigator.clipboard.writeText(link); toast('Invite link copied'); } catch (e) { toast(link); }

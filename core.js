@@ -102,16 +102,18 @@ const api = {
 };
 async function load() {
   const from = addDays(mondayOf(today()), -84);
-  const [profiles, duels, leagues, members, recent, mine, meas, details] = await Promise.all([
+  const [profiles, duels, leagues, members, mine, meas, details] = await Promise.all([
     pageAll(() => sb.from('profiles').select('*').order('created_at')),
     pageAll(() => sb.from('duels').select('*').order('created_at')),
     pageAll(() => sb.from('leagues').select('*').order('created_at')),
     pageAll(() => sb.from('league_members').select('*').order('joined_at')),
-    pageAll(() => sb.from('days').select('*').gte('date', from).order('date')),
     pageAll(() => sb.from('days').select('*').eq('user_id', S.uid).order('date')),
     pageAll(() => sb.from('measurements').select('*').order('date')),
     pageAll(() => sb.from('profile_details').select('*').eq('user_id', S.uid))
   ]);
+  /* Everyone's days for the past year, or back to the oldest league start if that is earlier, so history and every league week can be opened */
+  const since = leagues.reduce((m, l) => { const t = new Date(l.created_at), s = isNaN(t) ? m : iso(t); return s < m ? s : m; }, addDays(today(), -365));
+  const recent = await pageAll(() => sb.from('days').select('*').gte('date', since).order('date').order('user_id'));
   S.profiles = {}; profiles.forEach(p => { S.profiles[p.id] = p; });
   S.me = S.profiles[S.uid] || null;
   S.details = details[0] || null;
