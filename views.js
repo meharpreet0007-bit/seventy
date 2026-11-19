@@ -231,6 +231,32 @@ function dailyBoard(id, ids, mon, tot) {
   <h2 class='sub'>Snaps and points, ${short(focus)}</h2><div class='dlist'>${cards}</div></section>`;
 }
 
+/* League week by week: everyone's total for every week, and that week's measurements */
+function weekMatrix(id, ids, wi, ws) {
+  const idx = Array.from({ length: wi + 1 }, (_, i) => i), tot = (u, i) => leagueWeek(id, u, leagueWeekStart(id, i));
+  const best = idx.map(i => Math.max(0, ...ids.map(u => tot(u, i))));
+  const head = idx.map(i => `<button class='wh' data-act='lweek' data-arg='${i}' aria-pressed='${i === ws}'>Week ${i + 1}<small>${short(leagueWeekStart(id, i))}</small></button>`).join('');
+  const rows = ids.map(u => `<span class='dn${u === S.uid ? ' me' : ''}'>${u === S.uid ? 'You' : esc((S.profiles[u] || {}).name || 'Player')}</span>` + idx.map(i => {
+    const v = tot(u, i);
+    return `<button class='wc${v && v === best[i] ? ' top' : ''}' data-act='lweek' data-arg='${i}' aria-pressed='${i === ws}' aria-label='${nameOf(u)}, week ${i + 1}: ${v} of 70'>${v}</button>`;
+  }).join('')).join('');
+  return `<section class='card'><h2>Week by week</h2><div class='wscroll'><div class='wmat' style='--n:${idx.length}'><span></span>${head}${rows}</div></div><p class='muted small'>Points per week out of 70, with each week's best score highlighted. Tap a week to open its daily scores, snaps and measurements.</p></section>`;
+}
+function measBoard(id, ids, mon) {
+  const sun = weekDates(mon).find(isSunday), future = sun > today();
+  const cells = ids.map(u => {
+    const m = !future && sun >= joinDate(id, u) ? measOf(u, sun) : null;
+    const earlier = Object.keys(S.meas[u] || {}).filter(x => x < sun).sort(), prev = earlier.length ? S.meas[u][earlier[earlier.length - 1]] : null;
+    const cell = k => {
+      const v = m ? numOr(m[k]) : null, pv = prev ? numOr(prev[k]) : null, dl = v && pv ? +(v - pv).toFixed(1) : null;
+      return `<span>${v == null ? '–' : v}${dl ? `<small>${dl > 0 ? '+' : '−'}${Math.abs(dl)}</small>` : ''}</span>`;
+    };
+    return `<span class='dn${u === S.uid ? ' me' : ''}'>${u === S.uid ? 'You' : esc((S.profiles[u] || {}).name || 'Player')}<small>${secondLabel(u)}</small></span>${cell('waist')}${cell('second')}${cell('weight')}`;
+  }).join('');
+  const note = future ? `Measured on Sunday ${short(sun)}, which hasn't happened yet.` : `Logged on Sunday ${short(sun)}. Change is since each person's previous entry.`;
+  return `<section class='card'><div class='cardhead'><h2>Measurements</h2><span class='pts'>${short(sun)}</span></div><div class='mgrid'><span></span><span class='mh'>Waist, cm</span><span class='mh'>Biceps or glutes, cm</span><span class='mh'>Weight, kg</span>${cells}</div><p class='muted small'>${note}</p></section>`;
+}
+
 function viewLeague(id) {
   const l = S.leagues.find(x => x.id === id), ids = leagueMembers(id);
   const wi = Math.max(0, leagueWeekIdx(id, today()));
@@ -261,16 +287,16 @@ function viewLeague(id) {
     <div class='mid'><b>Week ${ws - first + 1}${isCur ? ', this week' : ''}</b><span>${short(mon)} to ${short(addDays(mon, 6))}, season ${season + 1}</span></div>
     <button class='arrow' data-act='lweek' data-arg='${ws + 1}' aria-label='Next week' ${isCur ? 'disabled' : ''}>&#8250;</button></div>`;
   return `<button class='back' data-act='backLeagues'>&#8249; All leagues</button><div class='pagehead'><div><h1>${esc(l.name)}</h1><p>Season ${season + 1}, week ${ws - first + 1} of 4${isCur ? `, day ${dn} of 7` : ''}, ${ids.length} member${ids.length === 1 ? '' : 's'}</p></div></div>
-  <section class='card'>${wkNav}</section>
-  <div class='grid two'><div class='stack'><section class='card'><h2>Leaderboard</h2><div class='seg' role='group'><button data-act='lbMode' data-arg='week' aria-pressed='${!monthly}'>${isCur ? 'This week' : 'Week ' + (ws - first + 1)}</button><button data-act='lbMode' data-arg='month' aria-pressed='${monthly}'>Season ${season + 1}</button></div><div class='list'>${rows}</div></section>${dailyBoard(id, sorted, mon, u => wk(u))}</div>
+  <section class='card'>${wkNav}</section>${weekMatrix(id, sorted, wi, ws)}
+  <div class='grid two'><div class='stack'><section class='card'><h2>Leaderboard</h2><div class='seg' role='group'><button data-act='lbMode' data-arg='week' aria-pressed='${!monthly}'>${isCur ? 'This week' : 'Week ' + (ws - first + 1)}</button><button data-act='lbMode' data-arg='month' aria-pressed='${monthly}'>Season ${season + 1}</button></div><div class='list'>${rows}</div></section>${dailyBoard(id, sorted, mon, u => wk(u))}${measBoard(id, sorted, mon)}</div>
   <div class='stack'><section class='card'><div class='cardhead'><h2>Weekly battles</h2><span class='pts'>Season ${season + 1}</span></div><div class='table'>${battles}</div><p class='muted small'>Tap a week to open it. Weeks run 7 days from the day the league started, and a season is 4 weeks. Scores reset each week and add up over the season. Anyone who joins starts from zero.</p></section>
-  <section class='card'><h2>Invite people</h2>${inviteBox(l.code)}<p class='muted small'>Members can see each other's points and snaps. Body measurements stay private.</p></section><button class='link danger' data-act='leaveLeague' data-arg='${id}'>${S.confirm === 'leave' + id ? 'Tap again to leave this league' : 'Leave league'}</button></div></div>`;
+  <section class='card'><h2>Invite people</h2>${inviteBox(l.code)}<p class='muted small'>Members can see each other's points, snaps and body measurements.</p></section><button class='link danger' data-act='leaveLeague' data-arg='${id}'>${S.confirm === 'leave' + id ? 'Tap again to leave this league' : 'Leave league'}</button></div></div>`;
 }
 
 /* History: every logged day and measurement, for you and your competitors */
 const secondLabel = uid => (S.profiles[uid] || {}).second_measure === 'glutes' ? 'Glutes' : 'Biceps';
 const ownerName = uid => uid === S.uid ? 'Your' : esc((S.profiles[uid] || {}).name || 'Player') + `'s`;
-const canSeeMeas = uid => uid === S.uid || !!(S.opp && S.opp.id === uid);
+const canSeeMeas = uid => uid === S.uid || !!(S.opp && S.opp.id === uid) || S.leagues.some(l => leagueMembers(l.id).includes(uid));
 const numOr = v => Number(v) > 0 ? Number(v) : null;
 function peopleIds() {
   const out = [S.uid];
@@ -342,7 +368,7 @@ function histLog(uid, cmp, weeksShown) {
 function measCard(uid) {
   const m = S.meas[uid] || {}, dates = Object.keys(m).sort().reverse(), lab = secondLabel(uid);
   let body;
-  if (!dates.length) body = `<p class='muted'>${canSeeMeas(uid) ? 'No measurements yet. Add them on a Sunday.' : 'Measurements are only shared with you and your duel opponent.'}</p>`;
+  if (!dates.length) body = `<p class='muted'>${canSeeMeas(uid) ? 'No measurements yet. Add them on a Sunday.' : 'Measurements are only shared with people in the same league or duel.'}</p>`;
   else {
     const fmt = v => numOr(v) == null ? '–' : numOr(v);
     body = `<div class='mt head'><span>Date</span><span>Waist</span><span>${lab}</span><span>Weight</span></div>` + dates.map((x, i) => {
@@ -369,7 +395,7 @@ function viewHistory() {
     <section class='card'><div class='cardhead'><h2>Daily scores</h2><div class='seg mini' role='group'><button data-act='histRange' data-arg='28' aria-pressed='${n === 28}'>4 weeks</button><button data-act='histRange' data-arg='84' aria-pressed='${n === 84}'>12 weeks</button></div></div>${c ? keyChips(who) : ''}${dailyChart(who, n)}</section>
     <section class='card'><h2>Day by day</h2>${c ? `<p class='muted small'>Big number is ${nameOf(u)}'s score, small number is ${nameOf(c)}'s.</p>` : ''}${histLog(u, c, S.hw || 4)}</section>
   </div><div class='stack'>
-    <section class='card'><h2>Measurement trend</h2>${metricSeg}${c ? keyChips(who.filter(canSeeMeas)) : ''}${lineChart(series, unit)}<p class='muted small'>${label} in ${unit}.${hidden.length ? ' ' + hidden.map(x => ownerName(x).replace(/'s$/, '')).join(', ') + ' keep measurements private unless you are in a duel together.' : ''}</p></section>
+    <section class='card'><h2>Measurement trend</h2>${metricSeg}${c ? keyChips(who.filter(canSeeMeas)) : ''}${lineChart(series, unit)}<p class='muted small'>${label} in ${unit}.${hidden.length ? ' ' + hidden.map(x => ownerName(x).replace(/'s$/, '')).join(', ') + ' do not share a league or duel with you, so their measurements are hidden.' : ''}</p></section>
     ${who.map(measCard).join('')}
   </div></div>`;
 }

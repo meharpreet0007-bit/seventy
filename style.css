@@ -339,3 +339,16 @@ nav .tab{position:relative;isolation:isolate}
 .mt{display:grid;grid-template-columns:minmax(0,1.1fr) repeat(3,minmax(0,1fr));gap:8px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
 .mt.head{border-top:0;color:var(--muted);font-size:12.5px;padding-top:0}
 .mt small{display:block;font-size:11.5px;color:var(--muted)}
+/* Week by week and measurements */
+.wscroll{overflow-x:auto;scrollbar-width:thin;margin:0 -4px;padding:2px 4px 6px}
+.wmat{display:grid;grid-template-columns:minmax(78px,1.3fr) repeat(var(--n),minmax(54px,1fr));gap:5px;align-items:center;min-width:calc(78px + var(--n) * 59px)}
+.wh{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:46px;border-radius:10px;font-size:12.5px;font-weight:600;text-align:center;color:var(--muted)}
+.wh small{font-size:11px;font-weight:400}
+.wh[aria-pressed='true']{background:var(--you);color:var(--on-accent)}
+.wc{height:38px;border-radius:9px;display:grid;place-items:center;font-size:14px;font-weight:600;background:var(--track);text-align:center}
+.wc.top{background:color-mix(in srgb,var(--you) 22%,var(--track))}
+.wc[aria-pressed='true']{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ink) 45%,transparent)}
+.mgrid{display:grid;grid-template-columns:minmax(76px,1.2fr) repeat(3,minmax(0,1fr));gap:10px 8px;align-items:baseline;font-size:14px}
+.mgrid .mh{font-size:11.5px;color:var(--muted);line-height:1.2}
+.mgrid small{display:block;font-size:11.5px;color:var(--muted)}
+.mgrid .dn{white-space:normal}

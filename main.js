@@ -97,7 +97,7 @@ function viewOnboard(error) {
   const me = S.me || {}, d = S.details || {}, editing = !!(S.me && S.details);
   const gender = d.gender || (me.second_measure === 'glutes' ? 'female' : me.second_measure === 'biceps' ? 'male' : '');
   const pick = (group, val, label, cur) => `<button type='button' data-group='${group}' data-pick='${val}' aria-pressed='${cur === val}'>${label}</button>`;
-  app.innerHTML = `<div class='auth'><div><h1>${editing ? 'Edit your details' : 'Your details'}</h1><p class='muted'>Only you can see your age, height, weight and goal.</p></div>
+  app.innerHTML = `<div class='auth'><div><h1>${editing ? 'Edit your details' : 'Your details'}</h1><p class='muted'>Only you can see your age, height and goal. Weight and body measurements you log on Sundays are shared with your duel opponent and league.</p></div>
   <form class='form' id='onb'>
   <label class='field'>Name<input class='input' type='text' id='name' required maxlength='20' autocomplete='given-name' value='${esc(me.name || '')}'></label>
   <div class='field'>Gender<div class='seg' role='group'>${pick('gender', 'male', 'Male', gender)}${pick('gender', 'female', 'Female', gender)}</div></div>
