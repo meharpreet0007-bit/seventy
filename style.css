@@ -362,3 +362,8 @@ nav .tab{position:relative;isolation:isolate}
 .rday.empty em{color:var(--muted);font-weight:400}
 .rsnap{flex:none;width:118px;scroll-snap-align:start}
 .rmore{flex:none;align-self:center;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);color:var(--muted);font-weight:500;font-size:14px;white-space:nowrap}
+/* Snap viewer pager */
+.pager{display:flex;align-items:center;gap:6px;justify-self:center}
+.pager b{font-size:14px;font-weight:600;min-width:58px;text-align:center}
+#layer .controls .pager button{width:46px;min-height:46px;font-size:30px;line-height:1;text-align:center;border-radius:50%;background:rgba(255,255,255,.14)}
+#layer .controls .pager button[disabled]{opacity:.3}

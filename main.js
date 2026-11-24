@@ -246,9 +246,18 @@ async function openSnap(uid, date, kind) {
   if (!path) return;
   const other = kind === 'steps' ? d.snap_path : d.steps_path;
   const info = kind === 'steps' ? 'Steps screenshot' : (d.snap_at ? clock(d.snap_at) + ', ' : '') + (d.snap_verified ? 'Live snap' : 'Uploaded photo');
+  const list = S.reelNav ? (S.reelList || []) : [], at = list.findIndex(p => p.u === uid && p.x === date);
+  const step = n => { const q = list[at + n]; if (q) openSnap(q.u, q.x, 'gym'); };
+  const pager = list.length > 1 && at >= 0 ? `<span class='pager'><button id='prev' aria-label='Newer snap' ${at <= 0 ? 'disabled' : ''}>&#8249;</button><b>${at + 1} of ${list.length}</b><button id='next' aria-label='Older snap' ${at >= list.length - 1 ? 'disabled' : ''}>&#8250;</button></span>` : '<span></span>';
   layer.classList.add('open');
-  layer.innerHTML = `<div class='caption'><span>${nameOf(uid)}, ${short(date)}</span><span>${info}</span></div><div class='stage'><img id='full' class='fit' alt=''></div><div class='controls'><button id='cancel'>Close</button><span></span>${other ? `<button class='right' id='other'>${kind === 'steps' ? 'Gym photo' : 'Steps screenshot'}</button>` : '<span></span>'}</div>`;
+  layer.innerHTML = `<div class='caption'><span>${nameOf(uid)}, ${short(date)}</span><span>${info}</span></div><div class='stage'><img id='full' class='fit' alt=''></div><div class='controls'><button id='cancel'>Close</button>${pager}${other ? `<button class='right' id='other'>${kind === 'steps' ? 'Gym photo' : 'Steps screenshot'}</button>` : '<span></span>'}</div>`;
   document.getElementById('cancel').onclick = closeLayer;
+  if (at >= 0 && list.length > 1) {
+    document.getElementById('prev').onclick = () => step(-1); document.getElementById('next').onclick = () => step(1);
+    let sx = null; const st = layer.querySelector('.stage');
+    st.ontouchstart = e => { sx = e.touches[0].clientX; };
+    st.ontouchend = e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1); };
+  }
   if (other) document.getElementById('other').onclick = () => openSnap(uid, date, kind === 'steps' ? 'gym' : 'steps');
   try { document.getElementById('full').src = await urlFor(path); } catch (e) { toast(`That photo couldn't load.`); closeLayer(); }
 }
@@ -280,7 +289,8 @@ const ACTIONS = {
       S.snapUrls = {}; await load(); S.date = today(); render(); toast('Your progress was reset');
     } catch (e) { render(); toast(`Couldn't reset your progress. ${e.message || ''}`); }
   },
-  snap(a) { const [u, x, k] = a.split('|'); openSnap(u, x, k); },
+  snap(a) { const [u, x, k] = a.split('|'); S.reelNav = false; openSnap(u, x, k); },
+  reelSnap(a) { const [u, x] = a.split('|'); S.reelNav = true; openSnap(u, x); },
   camera() { openCamera(); },
   upload(a) { pickPhoto(a, S.date); },
   editDetails() { viewOnboard(); toTop(); },
@@ -333,6 +343,12 @@ document.addEventListener('input', e => {
   setDay({ measured: done });
   document.getElementById('hero').innerHTML = heroHTML(S.date, day(S.uid, S.date));
   document.getElementById('measpts').textContent = done ? '2 of 2' : '2 pts';
+});
+document.addEventListener('keydown', e => {
+  if (!layer.classList.contains('open')) return;
+  if (e.key === 'Escape') { closeLayer(); return; }
+  const b = document.getElementById(e.key === 'ArrowRight' ? 'next' : e.key === 'ArrowLeft' ? 'prev' : '_none');
+  if (b && !b.disabled) b.click();
 });
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState === 'hidden') { flush(); return; }

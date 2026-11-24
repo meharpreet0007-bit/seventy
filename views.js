@@ -297,12 +297,13 @@ function viewLeague(id) {
 function snapReel() {
   const ids = peopleIds(), n = S.reelDays || 7;
   let out = '', total = 0;
+  S.reelList = [];
   for (let i = 0; i < n; i++) {
     const x = addDays(today(), -i), list = ids.map(u => ({ u, d: day(u, x) })).filter(p => p.d && p.d.snap_path);
-    total += list.length;
+    total += list.length; list.forEach(p => S.reelList.push({ u: p.u, x }));
     const name = i === 0 ? 'Today' : i === 1 ? 'Yesterday' : DAYS[parse(x).getDay()].slice(0, 3);
     out += `<div class='rday${list.length ? '' : ' empty'}'><b>${name}</b><span>${short(x)}</span><em>${list.length} snap${list.length === 1 ? '' : 's'}</em></div>` +
-      list.map(p => `<button class='sg rsnap' data-act='snap' data-arg='${p.u}|${x}' aria-label='${nameOf(p.u)}, ${short(x)}'><img data-snap='${esc(p.d.snap_path)}' alt=''><span class='cap'><b>${nameOf(p.u)}</b>${p.d.snap_at ? clock(p.d.snap_at) : ''}${p.d.snap_verified ? (p.d.snap_at ? ', ' : '') + 'verified' : ''}</span></button>`).join('');
+      list.map(p => `<button class='sg rsnap' data-act='reelSnap' data-arg='${p.u}|${x}' aria-label='${nameOf(p.u)}, ${short(x)}'><img data-snap='${esc(p.d.snap_path)}' alt=''><span class='cap'><b>${nameOf(p.u)}</b>${p.d.snap_at ? clock(p.d.snap_at) : ''}${p.d.snap_verified ? (p.d.snap_at ? ', ' : '') + 'verified' : ''}</span></button>`).join('');
   }
   return `<section class='card'><div class='cardhead'><h2>Daily snaps</h2><span class='pts'>Swipe for earlier days</span></div><div class='reel' tabindex='0' role='group' aria-label='Daily snaps, newest first'>${out}<button class='rmore' data-act='reelMore'>Older days</button></div>${total ? '' : `<p class='muted small'>No snaps in the last ${n} days. Take a gym snap to start the reel.</p>`}</section>`;
 }
