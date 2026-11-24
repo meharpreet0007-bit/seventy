@@ -62,10 +62,11 @@ function renderNav() {
     `<button class='me' data-act='go' data-arg='dashboard'>${avatar(S.me, 'you')}<div>${esc(S.me.name)}</div></button>`;
 }
 function render() {
-  const y = window.scrollY;
+  const y = window.scrollY, rl = app.querySelector('.reel'), rx = rl ? rl.scrollLeft : 0;
   app.innerHTML = S.player ? viewPlayer(S.player) : S.view === 'today' ? viewToday() : S.view === 'dashboard' ? viewDashboard() : S.view === 'history' ? viewHistory() : S.view === 'duel' ? viewDuel() : viewLeagues();
   renderNav();
   window.scrollTo(0, y);
+  const nr = app.querySelector('.reel'); if (nr) nr.scrollLeft = rx;
   app.querySelectorAll('img[data-snap]').forEach(async img => { try { img.src = await urlFor(img.dataset.snap); } catch (e) { } });
 }
 function toTop() { window.scrollTo(0, 0); }
@@ -292,6 +293,7 @@ const ACTIONS = {
   histCmp(a) { S.hc = a === 'none' ? null : a; render(); },
   histRange(a) { S.hn = +a; render(); },
   histMetric(a) { S.hm = a; render(); },
+  reelMore() { S.reelDays = (S.reelDays || 7) + 7; render(); },
   histMore() { S.hw = (S.hw || 4) + 4; render(); },
   async copy(a) {
     const link = location.origin + location.pathname + '?join=' + a;

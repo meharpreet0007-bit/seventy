@@ -69,7 +69,7 @@ function viewToday() {
   return `<div class='pagehead'><div><h1>${date === today() ? 'Log today' : 'Edit day'}</h1><p>${long(date)}</p></div><div class='datenav'>
       <button class='arrow' data-act='nav' data-arg='-1' aria-label='Previous day' ${date <= addDays(today(), -6) ? 'disabled' : ''}>&#8249;</button>
       <button class='arrow' data-act='nav' data-arg='1' aria-label='Next day' ${date >= today() ? 'disabled' : ''}>&#8250;</button></div></div>
-  <div class='grid two'><div class='stack'><section class='panel' id='hero'>${heroHTML(date, d)}</section><section class='card'><div class='list'>${body}</div></section></div>
+  ${snapReel()}<div class='grid two'><div class='stack'><section class='panel' id='hero'>${heroHTML(date, d)}</section><section class='card'><div class='list'>${body}</div></section></div>
   <div class='stack'><section class='card'><div class='cardhead'><h2>This week</h2><span class='pts'>${wk} of 70</span></div>${weekBars(S.uid, mon, date)}</section>${duelCard}</div></div>`;
 }
 
@@ -291,6 +291,20 @@ function viewLeague(id) {
   <div class='grid two'><div class='stack'><section class='card'><h2>Leaderboard</h2><div class='seg' role='group'><button data-act='lbMode' data-arg='week' aria-pressed='${!monthly}'>${isCur ? 'This week' : 'Week ' + (ws - first + 1)}</button><button data-act='lbMode' data-arg='month' aria-pressed='${monthly}'>Season ${season + 1}</button></div><div class='list'>${rows}</div></section>${dailyBoard(id, sorted, mon, u => wk(u))}${measBoard(id, sorted, mon)}</div>
   <div class='stack'><section class='card'><div class='cardhead'><h2>Weekly battles</h2><span class='pts'>Season ${season + 1}</span></div><div class='table'>${battles}</div><p class='muted small'>Tap a week to open it. Weeks run 7 days from the day the league started, and a season is 4 weeks. Scores reset each week and add up over the season. Anyone who joins starts from zero.</p></section>
   <section class='card'><h2>Invite people</h2>${inviteBox(l.code)}<p class='muted small'>Members can see each other's points, snaps and body measurements.</p></section><button class='link danger' data-act='leaveLeague' data-arg='${id}'>${S.confirm === 'leave' + id ? 'Tap again to leave this league' : 'Leave league'}</button></div></div>`;
+}
+
+/* Daily snap reel on the home page: swipe sideways through each day's snaps, newest first */
+function snapReel() {
+  const ids = peopleIds(), n = S.reelDays || 7;
+  let out = '', total = 0;
+  for (let i = 0; i < n; i++) {
+    const x = addDays(today(), -i), list = ids.map(u => ({ u, d: day(u, x) })).filter(p => p.d && p.d.snap_path);
+    total += list.length;
+    const name = i === 0 ? 'Today' : i === 1 ? 'Yesterday' : DAYS[parse(x).getDay()].slice(0, 3);
+    out += `<div class='rday${list.length ? '' : ' empty'}'><b>${name}</b><span>${short(x)}</span><em>${list.length} snap${list.length === 1 ? '' : 's'}</em></div>` +
+      list.map(p => `<button class='sg rsnap' data-act='snap' data-arg='${p.u}|${x}' aria-label='${nameOf(p.u)}, ${short(x)}'><img data-snap='${esc(p.d.snap_path)}' alt=''><span class='cap'><b>${nameOf(p.u)}</b>${p.d.snap_at ? clock(p.d.snap_at) : ''}${p.d.snap_verified ? (p.d.snap_at ? ', ' : '') + 'verified' : ''}</span></button>`).join('');
+  }
+  return `<section class='card'><div class='cardhead'><h2>Daily snaps</h2><span class='pts'>Swipe for earlier days</span></div><div class='reel' tabindex='0' role='group' aria-label='Daily snaps, newest first'>${out}<button class='rmore' data-act='reelMore'>Older days</button></div>${total ? '' : `<p class='muted small'>No snaps in the last ${n} days. Take a gym snap to start the reel.</p>`}</section>`;
 }
 
 /* History: every logged day and measurement, for you and your competitors */
